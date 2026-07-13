@@ -327,6 +327,8 @@ void mame_ui_manager::init()
 			handler_callback_func(
 				[this, &target = machine().render().ui_target()] () -> uint32_t
 				{
+					// DISABLE INITIALIZING, LOADING & DECRYPTING MESSAGES
+					if (!machine().options().skip_gameinfo())				
 					draw_text_box(target, messagebox_text, ui::text_layout::text_justify::LEFT, 0.5F, 0.5F, colors().background_color());
 					return 0;
 				}));
@@ -658,6 +660,8 @@ void mame_ui_manager::display_startup_screens(bool first_time)
 	bool show_warnings = true;
 	bool video_none = strcmp(downcast<osd_options &>(machine().options()).video(), OSDOPTVAL_NONE) == 0;
 
+	// FORCE INTERACTIVE WARNING MESSAGES (HARD RESET)
+	first_time = show_gameinfo;
 	// disable everything if we are using -str for 300 or fewer seconds, or if we're the empty driver,
 	// or if we are debugging, or if there's no mame window to send inputs to
 	if (!first_time || (str > 0 && str < 60*5) || &machine().system() == &GAME_NAME(___empty) || (machine().debug_flags & DEBUG_FLAG_ENABLED) || video_none)
