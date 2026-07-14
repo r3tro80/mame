@@ -18,14 +18,35 @@ jobs:
             choco install msys2 -y
 
       - run:
-          name: Update MSYS2 and install packages
+          name: Verify MSYS2 installation
           shell: powershell.exe
           command: |
-            C:\tools\msys64\usr\bin\bash.exe -lc "
-              pacman --noconfirm -Syuu
+            if (Test-Path "C:\tools\msys64\usr\bin\bash.exe") {
+              Write-Host "MSYS2 trovato in C:\tools\msys64"
+            }
+            elseif (Test-Path "C:\msys64\usr\bin\bash.exe") {
+              Write-Host "MSYS2 trovato in C:\msys64"
+            }
+            else {
+              Write-Error "MSYS2 non trovato"
+              exit 1
+            }
+
+      - run:
+          name: Install MAME dependencies
+          shell: powershell.exe
+          command: |
+            $bash = "C:\tools\msys64\usr\bin\bash.exe"
+
+            if (!(Test-Path $bash)) {
+              $bash = "C:\msys64\usr\bin\bash.exe"
+            }
+
+            & $bash -lc "
+              pacman --noconfirm -Sy
               pacman --noconfirm -S --needed \
-                make \
                 git \
+                make \
                 mingw-w64-ucrt-x86_64-gcc \
                 mingw-w64-ucrt-x86_64-python \
                 mingw-w64-ucrt-x86_64-SDL2 \
@@ -37,11 +58,23 @@ jobs:
           name: Build MAME
           shell: powershell.exe
           command: |
-            C:\tools\msys64\usr\bin\bash.exe -lc "
-              export PATH=/ucrt64/bin:$PATH
-              make REGENIE=1 -j$(nproc)
+            $bash = "C:\tools\msys64\usr\bin\bash.exe"
+
+            if (!(Test-Path $bash)) {
+              $bash = "C:\msys64\usr\bin\bash.exe"
+            }
+
+            & $bash -lc "
+              export PATH=/ucrt64/bin:/usr/bin:`$PATH
+              make -j`$(nproc)
             "
 
       - store_artifacts:
           path: mame.exe
-          
+
+
+workflows:
+  build_mame:
+    jobs:
+      - build_mame_windows
+      
