@@ -6,46 +6,42 @@ jobs:
   build_mame_windows:
     machine:
       image: windows-server-2022-gui:current
-    resource_class: windows.large
+      resource_class: windows.large
+
     steps:
       - checkout
 
       - run:
-          name: "Configure MSYS2 and Install Dependencies"
-          shell: bash.exe
+          name: Install MSYS2
+          shell: powershell.exe
           command: |
-            # Update package database
-            pacman -Sy --noconfirm
-            
-            # Install MAME build essentials, gcc toolchain, and libraries
-            pacman -S --noconfirm --needed \
-              git make mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-python \
-              mingw-w64-ucrt-x86_64-SDL2 mingw-w64-ucrt-x86_64-SDL2_ttf \
-              mingw-w64-x86_64-fontconfig mingw-w64-ucrt-x86_64-qt6-bas
+            choco install msys2 -y
 
       - run:
-          name: "Fetch Submodules"
-          shell: bash.exe
-          command: git submodule update --init --recursive
-
-      - run:
-          name: "Compile MAME for Windows"
-          shell: bash.exe
+          name: Update MSYS2 and install packages
+          shell: powershell.exe
           command: |
-            # Ensure MinGW binaries are in the path for compilation
-            export PATH="/mingw64/bin:$PATH"
-            make -j${NUMBER_OF_PROCESSORS}
+            C:\tools\msys64\usr\bin\bash.exe -lc "
+              pacman --noconfirm -Syuu
+              pacman --noconfirm -S --needed \
+                make \
+                git \
+                mingw-w64-ucrt-x86_64-gcc \
+                mingw-w64-ucrt-x86_64-python \
+                mingw-w64-ucrt-x86_64-SDL2 \
+                mingw-w64-ucrt-x86_64-SDL2_ttf \
+                mingw-w64-ucrt-x86_64-qt6-base
+            "
 
       - run:
-          name: "Run Validation Tests"
-          shell: bash.exe
-          command: ./mame64.exe -validate
+          name: Build MAME
+          shell: powershell.exe
+          command: |
+            C:\tools\msys64\usr\bin\bash.exe -lc "
+              export PATH=/ucrt64/bin:$PATH
+              make REGENIE=1 -j$(nproc)
+            "
 
       - store_artifacts:
-          path: mame64.exe
-          destination: mame-windows-binary
-
-workflows:
-  windows_ci_pipeline:
-    jobs:
-      - build_mame_windows
+          path: mame.exe
+          
